@@ -1,14 +1,80 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
+mod commands;
+mod state;
+
+use sqlx::sqlite::SqlitePoolOptions;
+use tauri::Manager;
+use tauri_plugin_sql::{Migration, MigrationKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Migrations are run by tauri_plugin_sql for the JS side.
+    // We also run them via sqlx for the Rust-side pool below.
+    let migrations = vec![Migration {
+        version: 1,
+        description: "create_initial_tables",
+        sql: "
+            CREATE TABLE IF NOT EXISTS app_state (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS sessions (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                started_at INTEGER NOT NULL,
+                ended_at   INTEGER
+            );
+        ",
+        kind: MigrationKind::Up,
+    }];
+
     tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations("sqlite:flowstate.db", migrations)
+                .build(),
+        )
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            let app_data_dir = app.path().app_data_dir()
+                .expect("failed to resolve app data dir");
+            std::fs::create_dir_all(&app_data_dir)
+                .expect("failed to create app data dir");
+
+            let db_path = app_data_dir.join("flowstate.db");
+            let db_url = format!("sqlite://{}?mode=rwc", db_path.display());
+
+            // Build the pool synchronously inside setup using a temp runtime
+            let pool = tauri::async_runtime::block_on(async {
+                SqlitePoolOptions::new()
+                    .max_connections(4)
+                    .connect(&db_url)
+                    .await
+                    .expect("failed to connect to SQLite")
+            });
+
+            // Run migrations on the Rust-side pool
+            tauri::async_runtime::block_on(async {
+                sqlx::migrate!("../migrations")
+                    .run(&pool)
+                    .await
+                    .expect("failed to run migrations");
+            });
+
+            app.manage(state::DbState { pool });
+            app.manage(state::AppState::default());
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::git::get_status,
+            commands::git::get_log,
+            commands::git::get_diff,
+            commands::terminal::spawn_shell,
+            commands::terminal::write_to_shell,
+            commands::db::initialize_db,
+            commands::db::save_app_state,
+            commands::db::load_app_state,
+            commands::terminal::resize_pty
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
