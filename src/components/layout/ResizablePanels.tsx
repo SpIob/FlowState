@@ -1,4 +1,4 @@
-/* src/components/layout/ResizablePanels.tsx */
+// src/components/layout/ResizablePanels.tsx
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { MonacoEditor } from '../editor/MonacoEditor';
 import { TerminalPanel } from '../terminal/TerminalPanel';
@@ -6,6 +6,7 @@ import { GitPanel } from '../git/GitPanel';
 
 interface ResizablePanelsProps {
   repoPath: string;
+  activeModel: string;
 }
 
 interface PanelState {
@@ -14,7 +15,7 @@ interface PanelState {
   git: number;
 }
 
-export function ResizablePanels({ repoPath }: ResizablePanelsProps) {
+export function ResizablePanels({ repoPath, activeModel }: ResizablePanelsProps) {
   const [panels, setPanels] = useState<PanelState>({
     editor: 50,
     terminal: 25,
@@ -30,13 +31,11 @@ export function ResizablePanels({ repoPath }: ResizablePanelsProps) {
 
   const onMouseMove = useCallback((e: MouseEvent) => {
     if (!dragStateRef.current) return;
-
     const { dividerIndex, startX, startPanels } = dragStateRef.current;
     const containerWidth = containerRef.current?.offsetWidth || window.innerWidth;
     const delta = ((e.clientX - startX) / containerWidth) * 100;
 
     if (dividerIndex === 0) {
-      // Editor | Terminal divider
       const newEditor = startPanels.editor + delta;
       const newTerminal = startPanels.terminal - delta;
 
@@ -56,7 +55,6 @@ export function ResizablePanels({ repoPath }: ResizablePanelsProps) {
         }
       }
     } else {
-      // Terminal | Git divider
       const newTerminal = startPanels.terminal + delta;
       const newGit = startPanels.git - delta;
 
@@ -110,7 +108,7 @@ export function ResizablePanels({ repoPath }: ResizablePanelsProps) {
     <div ref={containerRef} className="flex flex-1 overflow-hidden">
       {/* Editor Panel */}
       <div className="h-full overflow-hidden" style={{ width: `${panels.editor}%` }}>
-        <MonacoEditor filePath="src/main.rs" />
+        <MonacoEditor filePath="src/main.rs" activeModel={activeModel} />
       </div>
 
       {/* Divider 1 */}
@@ -132,7 +130,7 @@ export function ResizablePanels({ repoPath }: ResizablePanelsProps) {
 
       {/* Git Panel */}
       <div className="h-full overflow-hidden" style={{ width: `${panels.git}%` }}>
-        <GitPanel repoPath={repoPath} />
+        <GitPanel repoPath={repoPath} activeModel={activeModel} />
       </div>
     </div>
   );

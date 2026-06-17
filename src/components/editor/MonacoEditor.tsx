@@ -1,9 +1,11 @@
 /* src/components/editor/MonacoEditor.tsx */
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
+import { useCompletion } from '../../hooks/useCompletion';
 
 interface MonacoEditorProps {
   filePath?: string;
+  activeModel: string;
 }
 
 interface Tab {
@@ -18,8 +20,10 @@ const tabs: Tab[] = [
   { id: 'cargo', label: 'Cargo.toml', language: 'toml' },
 ];
 
-export function MonacoEditor({ filePath }: MonacoEditorProps) {
+export function MonacoEditor({ filePath, activeModel }: MonacoEditorProps) {
   const [activeTab, setActiveTab] = useState<string>('main');
+  console.log(activeModel);
+  const { registerCompletionProvider } = useCompletion(activeModel);
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-panel)]">
@@ -68,9 +72,12 @@ export function MonacoEditor({ filePath }: MonacoEditorProps) {
             padding: { top: 8 },
             renderLineHighlight: 'all',
             lineNumbersMinChars: 3,
+            inlineSuggest: { enabled: true, mode: 'subwordSmart' },
+            quickSuggestions: { other: false, comments: false, strings: false },
           }}
-          onMount={(editor) => {
+          onMount={(editor, monacoInstance) => {
             editor.focus();
+            registerCompletionProvider(editor, monacoInstance);
           }}
         />
       </div>

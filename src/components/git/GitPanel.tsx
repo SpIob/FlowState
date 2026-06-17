@@ -1,22 +1,25 @@
-/* src/components/git/GitPanel.tsx */
+// src/components/git/GitPanel.tsx
 import { useState } from 'react';
 import { GitStatus } from './GitStatus';
 import { GitLog } from './GitLog';
 import { GitDiff } from './GitDiff';
+import { ChatPanel } from '../ai/ChatPanel';
 
 interface GitPanelProps {
   repoPath: string;
+  activeModel: string;
 }
 
-type ActiveTab = 'status' | 'log' | 'diff';
+type ActiveTab = 'status' | 'log' | 'diff' | 'chat';
 
 const gitTabs: { id: ActiveTab; label: string }[] = [
   { id: 'status', label: 'STATUS' },
   { id: 'log', label: 'LOG' },
   { id: 'diff', label: 'DIFF' },
+  { id: 'chat', label: 'CHAT' },
 ];
 
-export function GitPanel({ repoPath }: GitPanelProps) {
+export function GitPanel({ repoPath, activeModel }: GitPanelProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('status');
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
@@ -29,11 +32,11 @@ export function GitPanel({ repoPath }: GitPanelProps) {
           return (
             <button
               key={tab.id}
-              className={`h-full px-4 text-[11px] font-semibold tracking-[0.08em] uppercase
-                ${isActive
+              className={`h-full px-4 text-[11px] font-semibold tracking-[0.08em] uppercase ${
+                isActive
                   ? 'text-[var(--text-primary)] border-b-2 border-b-[var(--accent)] bg-transparent'
                   : 'text-[var(--text-secondary)] bg-transparent border-b-2 border-transparent'
-                }`}
+              }`}
               onClick={() => setActiveTab(tab.id)}
             >
               {tab.label}
@@ -51,6 +54,7 @@ export function GitPanel({ repoPath }: GitPanelProps) {
         {activeTab === 'diff' && (
           <GitDiff repoPath={repoPath} filePath={selectedFile} />
         )}
+        {activeTab === 'chat' && <ChatPanel model={activeModel} />}
       </div>
     </div>
   );

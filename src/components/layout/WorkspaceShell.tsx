@@ -1,16 +1,18 @@
-/* src/components/layout/WorkspaceShell.tsx */
+// src/components/layout/WorkspaceShell.tsx
 import { useState, useEffect } from 'react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { TitleBar } from './TitleBar';
 import { ResizablePanels } from './ResizablePanels';
 import { StatusBar } from './StatusBar';
 import { saveAppState, loadAppState } from '../../lib/tauri';
+import { useOllamaModels } from '../../hooks/useOllamaModels';
 
 const REPO_PATH_KEY = 'repoPath';
 
 export function WorkspaceShell() {
   const [repoPath, setRepoPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { models, activeModel, setActiveModel, ollamaReady } = useOllamaModels();
 
   // On mount, load the last used repo path from SQLite
   useEffect(() => {
@@ -63,8 +65,13 @@ export function WorkspaceShell() {
   return (
     <div className="flex flex-col h-full w-full bg-[var(--bg-base)]">
       <TitleBar repoPath={repoPath} onSelectRepo={handleSelectRepo} />
-      <ResizablePanels repoPath={repoPath} />
-      <StatusBar />
+      <ResizablePanels repoPath={repoPath} activeModel={activeModel} />
+      <StatusBar
+        activeModel={activeModel}
+        models={models}
+        onModelSelect={setActiveModel}
+        ollamaReady={ollamaReady}
+      />
     </div>
   );
 }

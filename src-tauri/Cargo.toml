@@ -20,6 +20,9 @@ tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-native-tls", "macros"] }
 portable-pty = "0.8"
+reqwest = { version = "0.12", features = ["json", "stream"] }
+tokio = { version = "1", features = ["full"] }
+futures-util = "0.3"
 
 [profile.release]
 # Optimize for binary size, which is standard for Tauri desktop apps

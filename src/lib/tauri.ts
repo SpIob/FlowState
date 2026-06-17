@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { GitFileStatus, GitCommit } from '../types/git.types';
+import type { OllamaModel, ChatMessage } from '../types/ai.types';
 
 /**
  * Fetches the Git status (staged, unstaged, untracked) for a given repository.
@@ -62,4 +63,27 @@ export async function loadAppState(key: string): Promise<string | null> {
  */
 export async function resizePty(cols: number, rows: number): Promise<void> {
   await invoke('resize_pty', { cols, rows });
+}
+
+export async function listModels(): Promise<OllamaModel[]> {
+  return await invoke('list_models');
+}
+
+export async function chatStream(
+  model: string,
+  messages: ChatMessage[]
+): Promise<void> {
+  await invoke('chat_stream', { model, messages });
+}
+
+export async function completeCode(
+  model: string,
+  prefix: string,
+  suffix: string
+): Promise<string> {
+  return await invoke('complete_code', { model, prefix, suffix });
+}
+
+export async function checkOllama(): Promise<boolean> {
+  return await invoke('check_ollama');
 }

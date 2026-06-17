@@ -33,7 +33,6 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()
                 .expect("failed to resolve app data dir");
@@ -70,10 +69,14 @@ pub fn run() {
             commands::git::get_diff,
             commands::terminal::spawn_shell,
             commands::terminal::write_to_shell,
+            commands::terminal::resize_pty,
             commands::db::initialize_db,
             commands::db::save_app_state,
             commands::db::load_app_state,
-            commands::terminal::resize_pty
+            commands::ollama::list_models,
+            commands::ollama::chat_stream,
+            commands::ollama::complete_code,
+            commands::ollama::check_ollama,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
