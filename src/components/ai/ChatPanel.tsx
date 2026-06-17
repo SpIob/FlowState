@@ -1,47 +1,75 @@
-// src/components/ai/ChatPanel.tsx
-import React, { useEffect, useRef } from 'react';
-import { useChat } from '../../hooks/useChat';
-import { ChatMessage } from './ChatMessage';
-import { ChatInput } from './ChatInput';
+// src/components/ai/ModelSwitcher.tsx
+import { useState, useRef, useEffect } from 'react';
+import { OllamaModel } from '../../types/ai.types';
 
-interface ChatPanelProps {
-  model: string;
+interface ModelSwitcherProps {
+  models: OllamaModel[];
+  activeModel: string;
+  onSelect: (name: string) => void;
+  ollamaReady: boolean;
 }
 
-export function ChatPanel({ model }: ChatPanelProps) {
-  const { messages, sendMessage, isStreaming } = useChat(model);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const isInitialMount = useRef(true);
+export function ModelSwitcher({ models, activeModel, onSelect, ollamaReady }: ModelSwitcherProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isStreaming]);
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const formatSize = (bytes: number) => {
+    if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
+    return `${(bytes / 1e6).toFixed(1)} MB`;
+  };
+
+  const displayName = activeModel.length > 20 ? activeModel.slice(0, 20) + '…' : activeModel;
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-panel)]">
-      <div className="flex-1 overflow-y-auto scrollbar-thin py-3">
-        {messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-[var(--text-secondary)] text-[13px]">
-            Ask anything about your code.
-          </div>
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="bg-transparent border-none cursor-pointer text-[11px]"
+      >
+        {ollamaReady ? (
+          <span className="text-[var(--text-secondary)]">{displayName} ▾</span>
         ) : (
-          messages.map((msg, index) => (
-            <ChatMessage
-              key={index}
-              message={msg}
-              isStreaming={isStreaming && index === messages.length - 1}
-            />
-          ))
+          <span className="text-[var(--orange)]">Ollama offline ▾</span>
         )}
-        <div ref={bottomRef} />
-      </div>
-      <div className="shrink-0">
-        <ChatInput onSend={sendMessage} disabled={isStreaming} />
-      </div>
+      </button>
+
+      {open && (
+        <div className="absolute bottom-full left-0 mb-1 bg-[#111111] border border-[#2a2a2a] rounded min-w-[220px] shadow-[0_-4px_16px_rgba(0,0,0,0.5)] z-50 py-1">
+          {models.map((model) => (
+            <div
+              key={model.name}
+              onClick={() => {
+                onSelect(model.name);
+                setOpen(false);
+              }}
+              className="h-7 px-3 flex flex-row items-center gap-2 cursor-pointer hover:bg-[#1a1a1a]"
+            >
+              <div className="w-3 flex-shrink-0 flex items-center justify-center">
+                {model.name === activeModel && (
+                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+                )}
+              </div>
+              <span className="text-[var(--text-primary)] text-xs flex-1 truncate">
+                {model.name}
+              </span>
+              <span className="text-[var(--text-secondary)] text-[11px] text-right">
+                {formatSize(model.size)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

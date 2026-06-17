@@ -1,5 +1,5 @@
 // src/components/ai/ModelSwitcher.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { OllamaModel } from '../../types/ai.types';
 
 interface ModelSwitcherProps {
