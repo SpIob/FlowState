@@ -8,7 +8,6 @@ use windows::Win32::System::Registry::{
 use windows::Win32::UI::Shell::SHChangeNotify;
 use windows::Win32::Foundation::{HWND, BOOL};
 use windows::core::HSTRING;
-use std::ptr;
 
 #[tauri::command]
 pub async fn trigger_focus_mode() -> Result<(), String> {
