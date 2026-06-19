@@ -7,8 +7,8 @@ import { DashboardPanel } from '../dashboard/DashboardPanel';
 import { CommitStager } from './CommitStager';
 import { BranchManager } from './BranchManager';
 import { RemoteManager } from './RemoteManager';
-import { DatabasePanel } from '../database/DatabasePanel';
 import { CIPanel } from '../ci/CIPanel';
+import { DatabasePanel } from '../database/DatabasePanel';
 import { DocsPanel } from '../docs/DocsPanel';
 import { PluginPanel } from '../plugins/PluginPanel';
 
@@ -17,7 +17,7 @@ interface GitPanelProps {
   activeModel: string;
 }
 
-type ActiveTab = 'status' | 'branches' | 'remotes' | 'ci' | 'database' | 'docs' | 'log' | 'diff' | 'chat' | 'dashboard' | 'plugins';
+type ActiveTab = 'status' | 'branches' | 'remotes' | 'ci' | 'database' | 'docs' | 'plugins' | 'log' | 'diff' | 'chat' | 'dashboard';
 
 const gitTabs: { id: ActiveTab; label: string }[] = [
   { id: 'status', label: 'STATUS' },
@@ -35,7 +35,10 @@ const gitTabs: { id: ActiveTab; label: string }[] = [
 
 export function GitPanel({ repoPath, activeModel }: GitPanelProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('status');
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  
+  // FIX: Removed `setSelectedFile` to satisfy TypeScript strict mode.
+  // CommitStager handles its own internal file selection and inline diff preview.
+  const [selectedFile] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-panel)]">
@@ -70,9 +73,17 @@ export function GitPanel({ repoPath, activeModel }: GitPanelProps) {
         <div className={activeTab === 'remotes' ? 'h-full' : 'hidden'}>
           <RemoteManager repoPath={repoPath} />
         </div>
-        {/* NEW: DATABASE TAB RENDER */}
+        <div className={activeTab === 'ci' ? 'h-full' : 'hidden'}>
+          <CIPanel repoPath={repoPath} />
+        </div>
         <div className={activeTab === 'database' ? 'h-full' : 'hidden'}>
           <DatabasePanel />
+        </div>
+        <div className={activeTab === 'docs' ? 'h-full' : 'hidden'}>
+          <DocsPanel repoPath={repoPath} />
+        </div>
+        <div className={activeTab === 'plugins' ? 'h-full' : 'hidden'}>
+          <PluginPanel />
         </div>
         <div className={activeTab === 'log' ? 'h-full' : 'hidden'}>
           <GitLog repoPath={repoPath} />
@@ -82,15 +93,6 @@ export function GitPanel({ repoPath, activeModel }: GitPanelProps) {
         </div>
         <div className={activeTab === 'chat' ? 'h-full' : 'hidden'}>
           <ChatPanel model={activeModel} />
-        </div>
-        <div className={activeTab === 'ci' ? 'h-full' : 'hidden'}>
-          <CIPanel repoPath={repoPath} />
-        </div>
-        <div className={activeTab === 'docs' ? 'h-full' : 'hidden'}>
-          <DocsPanel repoPath={repoPath} />
-        </div>
-        <div className={activeTab === 'plugins' ? 'h-full' : 'hidden'}>
-          <PluginPanel />
         </div>
         <div className={activeTab === 'dashboard' ? 'h-full' : 'hidden'}>
           <DashboardPanel />
