@@ -4,19 +4,20 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { TitleBar } from './TitleBar';
 import { ResizablePanels } from './ResizablePanels';
 import { StatusBar } from './StatusBar';
-import { saveAppState, loadAppState } from '../../lib/tauri';
 import { useOllamaModels } from '../../hooks/useOllamaModels';
 import { useCognitiveScore } from '../../hooks/useCognitiveScore';
 import { useFocusMode } from '../../hooks/useFocusMode';
 import { useSignalCollector } from '../../hooks/useSignalCollector';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { FocusSetupCheck } from '../onboarding/FocusSetupCheck';
+import { saveAppState, loadAppState, checkPathExists } from '../../lib/tauri';
 
 const REPO_PATH_KEY = 'repoPath';
 
 export function WorkspaceShell() {
   const [repoPath, setRepoPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  
   const { models, activeModel, setActiveModel, ollamaReady } = useOllamaModels();
   const { score } = useCognitiveScore();
   useFocusMode(score);
@@ -25,8 +26,17 @@ export function WorkspaceShell() {
   // On mount, load the last used repo path from SQLite
   useEffect(() => {
     loadAppState(REPO_PATH_KEY)
-      .then((saved) => {
-        if (saved) setRepoPath(saved);
+      .then(async (saved) => {
+        if (saved) {
+          // Validate the path still exists on disk
+          const exists = await checkPathExists(saved).catch(() => false);
+          if (exists) {
+            setRepoPath(saved);
+          } else {
+            // Folder was deleted or moved; clear it from SQLite
+            await saveAppState(REPO_PATH_KEY, '').catch(console.error);
+          }
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -36,7 +46,7 @@ export function WorkspaceShell() {
   useEffect(() => {
     const appWindow = getCurrentWindow();
     let unlistenFocus: (() => void) | undefined;
-
+    
     appWindow.onFocusChanged(({ payload: focused }) => {
       recordFocusChange(focused);
     }).then((unlisten) => {
@@ -54,6 +64,7 @@ export function WorkspaceShell() {
       multiple: false,
       title: 'Open Repository',
     });
+    
     if (typeof selected === 'string') {
       setRepoPath(selected);
       await saveAppState(REPO_PATH_KEY, selected).catch(console.error);

@@ -1,90 +1,65 @@
-/* src/components/editor/MonacoEditor.tsx */
-import { useState } from 'react';
+// src/components/editor/MonacoEditor.tsx
 import Editor from '@monaco-editor/react';
+import { useEffect, useState } from 'react';
 import { useCompletion } from '../../hooks/useCompletion';
-import { useSignalCollector } from '../../hooks/useSignalCollector';
 
 interface MonacoEditorProps {
-  filePath?: string;
-  activeModel: string;
+  filePath: string | null;
+  initialContent: string;
+  onSave: (content: string) => void;
+  activeModel: string; // Required for AI completion
 }
 
-interface Tab {
-  id: string;
-  label: string;
-  language: string;
-}
-
-const tabs: Tab[] = [
-  { id: 'main', label: 'main.rs', language: 'rust' },
-  { id: 'server', label: 'server.rs', language: 'rust' },
-  { id: 'cargo', label: 'Cargo.toml', language: 'toml' },
-];
-
-export function MonacoEditor({ filePath, activeModel }: MonacoEditorProps) {
-  const [activeTab, setActiveTab] = useState<string>('main');
+export default function MonacoEditor({ filePath, initialContent, onSave, activeModel }: MonacoEditorProps) {
+  const [value, setValue] = useState(initialContent);
   const { registerCompletionProvider } = useCompletion(activeModel);
-  const { recordKeystroke } = useSignalCollector();
+
+  useEffect(() => {
+    setValue(initialContent);
+  }, [filePath, initialContent]);
+
+  const handleMount = (editor: any, monaco: any) => {
+    // Read directly from the model to avoid stale closure on Cmd+S
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+      () => {
+        const currentValue = editor.getModel()?.getValue() || '';
+        onSave(currentValue);
+      }
+    );
+
+    // FIX: Pass both the editor and the monaco namespace instance
+    registerCompletionProvider(editor, monaco);
+  };
+
+  if (!filePath) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-[var(--bg-base)] text-[var(--text-secondary)] text-sm">
+        Select a file from the explorer to start editing.
+      </div>
+    );
+  }
+
+  const ext = filePath.split('.').pop()?.toLowerCase();
+  const languageMap: Record<string, string> = {
+    'js': 'javascript', 'ts': 'typescript', 'py': 'python', 
+    'rs': 'rust', 'json': 'json', 'md': 'markdown', 'html': 'html', 'css': 'css'
+  };
+  const language = languageMap[ext || ''] || 'plaintext';
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-panel)]">
-      {/* Tab bar */}
-      <div className="h-[35px] flex items-center bg-[var(--bg-tabbar)] border-b border-[var(--border)] shrink-0">
-        {tabs.map((tab) => {
-          const isActive = tab.id === activeTab;
-          return (
-            <div
-              key={tab.id}
-              className={`h-full flex items-center px-4 text-[13px] cursor-pointer border-r border-[var(--border)] shrink-0
-                ${isActive
-                  ? 'bg-[var(--bg-tab-active)] text-[var(--text-primary)] border-t-2 border-t-[var(--accent)]'
-                  : 'bg-[var(--bg-tab-inactive)] text-[var(--text-secondary)]'
-                }`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <span>{tab.label}</span>
-              <button
-                className="ml-3 text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs leading-none"
-                onClick={(e) => {
-                  e.stopPropagation();
-                }}
-              >
-                ×
-              </button>
-            </div>
-          );
-        })}
-        <div className="flex-1 bg-[var(--bg-tabbar)] h-full" />
-      </div>
-
-      {/* Editor surface */}
-      <div className="flex-1 overflow-hidden">
-        <Editor
-          theme="vs-dark"
-          defaultLanguage="rust"
-          height="100%"
-          defaultPath={filePath}
-          options={{
-            fontSize: 13,
-            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-            lineNumbers: 'on',
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            padding: { top: 8 },
-            renderLineHighlight: 'all',
-            lineNumbersMinChars: 3,
-            inlineSuggest: { enabled: true, mode: 'subwordSmart' },
-            quickSuggestions: { other: false, comments: false, strings: false },
-          }}
-          onMount={(editor, monacoInstance) => {
-            editor.focus();
-            registerCompletionProvider(editor, monacoInstance);
-            editor.onKeyDown((e) => {
-              recordKeystroke(e.browserEvent.key, Date.now());
-            });
-          }}
-        />
-      </div>
-    </div>
+    <Editor
+      height="100%"
+      language={language}
+      value={value}
+      onChange={(v) => setValue(v || '')}
+      onMount={handleMount}
+      theme="vs-dark"
+      options={{ 
+        minimap: { enabled: false }, 
+        fontSize: 14,
+        fontFamily: 'Menlo, Monaco, "Courier New", monospace'
+      }}
+    />
   );
 }

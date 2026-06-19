@@ -1,28 +1,14 @@
-/* src/components/terminal/TerminalPanel.tsx */
+// src/components/terminal/TerminalPanel.tsx
 import { useRef } from 'react';
 import { useTerminal } from '../../hooks/useTerminal';
 
-export const TERMINAL_OPTIONS = {
-  theme: {
-    background: '#141414',
-    foreground: '#d4d4d4',
-    cursor: '#4ec9b0',
-    selectionBackground: '#264f78',
-    black: '#1e1e1e',
-    green: '#4ec9b0',
-    yellow: '#e5c07b',
-    red: '#e06c75',
-  },
-  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-  fontSize: 13,
-  lineHeight: 1.5,
-  cursorBlink: true,
-  cursorStyle: 'block' as const,
-};
+interface TerminalPanelProps {
+  repoPath: string;
+}
 
-export function TerminalPanel() {
+export function TerminalPanel({ repoPath }: TerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  useTerminal(containerRef);
+  useTerminal(containerRef, repoPath);
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-panel)]">

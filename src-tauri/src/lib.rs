@@ -32,6 +32,7 @@ pub fn run() {
                 .add_migrations("sqlite:flowstate.db", migrations)
                 .build(),
         )
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()
@@ -66,7 +67,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::git::get_status,
             commands::git::get_log,
-            commands::git::get_diff,
             commands::terminal::spawn_shell,
             commands::terminal::write_to_shell,
             commands::terminal::resize_pty,
@@ -89,6 +89,38 @@ pub fn run() {
             commands::focus_windows::trigger_focus_mode,
             #[cfg(target_os = "windows")]
             commands::focus_windows::check_shortcut_exists,
+            commands::git_ops::stage_file,
+            commands::git_ops::unstage_file,
+            commands::git_ops::get_diff,
+            commands::git_ops::create_branch,
+            commands::git_ops::checkout_branch,
+            commands::git_ops::merge_branch,
+            commands::git_ops::fetch_remote,
+            commands::git_ops::pull_remote,
+            commands::git_ops::push_remote,
+            commands::git_ops::commit,
+            commands::git_ops::init_repo,
+            commands::git_ops::list_branches,
+            commands::git_ops::delete_branch,
+            commands::git_ops::list_remotes,
+            commands::git_ops::add_remote,
+            commands::git_ops::remove_remote,
+            commands::git_ops::get_origin_info,
+            commands::fs::read_directory,
+            commands::fs::read_file,
+            commands::fs::write_file,
+            commands::fs::check_path_exists,
+            commands::terminal::kill_shell,
+            commands::db_viewer::list_tables,
+            commands::db_viewer::get_schema,
+            commands::db_viewer::query_data,
+            commands::db_viewer::run_readonly_query,
+            commands::github_ci::list_workflow_runs,
+            commands::github_ci::get_workflow_jobs,
+            commands::github_ci::get_job_logs,
+            commands::plugin_runtime::register_plugin,
+            commands::plugin_runtime::list_installed_plugins,
+            commands::plugin_runtime::grant_permission,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

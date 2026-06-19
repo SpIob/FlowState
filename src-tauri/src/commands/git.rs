@@ -1,4 +1,5 @@
-use git2::{DiffFormat, DiffOptions, Repository, Sort};
+// src-tauri/src/commands/git.rs
+use git2::{Repository, Sort};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -17,15 +18,16 @@ pub struct GitCommit {
 
 #[tauri::command]
 pub fn get_status(repo_path: String) -> Result<Vec<GitFileStatus>, String> {
+    // Strictly open the repo at the exact selected path
     let repo = Repository::open(&repo_path).map_err(|e| e.to_string())?;
     let statuses = repo.statuses(None).map_err(|e| e.to_string())?;
-
     let mut result = Vec::new();
+    
     for entry in statuses.iter() {
-        let path = entry.path().unwrap_or("").to_string();
+        let raw_path = entry.path().unwrap_or("");
         let status = entry.status();
-
         let mut status_strs = Vec::new();
+        
         if status.contains(git2::Status::INDEX_NEW) || status.contains(git2::Status::WT_NEW) {
             status_strs.push("untracked");
         }
@@ -40,12 +42,12 @@ pub fn get_status(repo_path: String) -> Result<Vec<GitFileStatus>, String> {
         }
 
         if status_strs.is_empty() {
-            status_strs.push("ignored");
+            continue; 
         }
 
         result.push(GitFileStatus {
-            path,
-            status: status_strs.join(","),
+            path: raw_path.to_string(),
+            status: status_strs.join(", "),
         });
     }
     Ok(result)
@@ -57,7 +59,6 @@ pub fn get_log(repo_path: String, limit: usize) -> Result<Vec<GitCommit>, String
     let mut revwalk = repo.revwalk().map_err(|e| e.to_string())?;
     revwalk.push_head().map_err(|e| e.to_string())?;
     revwalk.set_sorting(Sort::TIME).map_err(|e| e.to_string())?;
-
     let mut commits = Vec::new();
     for oid in revwalk.take(limit) {
         let oid = oid.map_err(|e| e.to_string())?;
@@ -71,31 +72,4 @@ pub fn get_log(repo_path: String, limit: usize) -> Result<Vec<GitCommit>, String
         });
     }
     Ok(commits)
-}
-
-#[tauri::command]
-pub fn get_diff(repo_path: String, file_path: String) -> Result<String, String> {
-    let repo = Repository::open(&repo_path).map_err(|e| e.to_string())?;
-    let mut opts = DiffOptions::new();
-    opts.pathspec(&file_path);
-
-    // Diff between index and working directory (unstaged changes)
-    let diff = repo
-        .diff_index_to_workdir(None, Some(&mut opts))
-        .map_err(|e| e.to_string())?;
-
-    let mut diff_str = String::new();
-    diff.print(DiffFormat::Patch, |_delta, _hunk, line| {
-        let content = std::str::from_utf8(line.content()).unwrap_or("");
-        let origin = line.origin();
-        match origin {
-            '+' | '-' | ' ' => diff_str.push(origin),
-            _ => {}
-        }
-        diff_str.push_str(content);
-        true
-    })
-    .map_err(|e| e.to_string())?;
-
-    Ok(diff_str)
 }

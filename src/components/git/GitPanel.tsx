@@ -1,20 +1,32 @@
 // src/components/git/GitPanel.tsx
 import { useState } from 'react';
-import { GitStatus } from './GitStatus';
 import { GitLog } from './GitLog';
 import { GitDiff } from './GitDiff';
 import { ChatPanel } from '../ai/ChatPanel';
 import { DashboardPanel } from '../dashboard/DashboardPanel';
+import { CommitStager } from './CommitStager';
+import { BranchManager } from './BranchManager';
+import { RemoteManager } from './RemoteManager';
+import { DatabasePanel } from '../database/DatabasePanel';
+import { CIPanel } from '../ci/CIPanel';
+import { DocsPanel } from '../docs/DocsPanel';
+import { PluginPanel } from '../plugins/PluginPanel';
 
 interface GitPanelProps {
   repoPath: string;
   activeModel: string;
 }
 
-type ActiveTab = 'status' | 'log' | 'diff' | 'chat' | 'dashboard';
+type ActiveTab = 'status' | 'branches' | 'remotes' | 'ci' | 'database' | 'docs' | 'log' | 'diff' | 'chat' | 'dashboard' | 'plugins';
 
 const gitTabs: { id: ActiveTab; label: string }[] = [
   { id: 'status', label: 'STATUS' },
+  { id: 'branches', label: 'BRANCHES' },
+  { id: 'remotes', label: 'REMOTES' },
+  { id: 'ci', label: 'CI' },
+  { id: 'database', label: 'DATABASE' },
+  { id: 'docs', label: 'DOCS' },
+  { id: 'plugins', label: 'PLUGINS' },
   { id: 'log', label: 'LOG' },
   { id: 'diff', label: 'DIFF' },
   { id: 'chat', label: 'CHAT' },
@@ -47,17 +59,42 @@ export function GitPanel({ repoPath, activeModel }: GitPanelProps) {
         })}
       </div>
 
-      {/* Panel body */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        {activeTab === 'status' && (
-          <GitStatus repoPath={repoPath} onFileSelect={setSelectedFile} />
-        )}
-        {activeTab === 'log' && <GitLog repoPath={repoPath} />}
-        {activeTab === 'diff' && (
+      {/* Panel body - Keep all mounted, toggle visibility to preserve state */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin relative">
+        <div className={activeTab === 'status' ? 'h-full' : 'hidden'}>
+          <CommitStager repoPath={repoPath} />
+        </div>
+        <div className={activeTab === 'branches' ? 'h-full' : 'hidden'}>
+          <BranchManager repoPath={repoPath} />
+        </div>
+        <div className={activeTab === 'remotes' ? 'h-full' : 'hidden'}>
+          <RemoteManager repoPath={repoPath} />
+        </div>
+        {/* NEW: DATABASE TAB RENDER */}
+        <div className={activeTab === 'database' ? 'h-full' : 'hidden'}>
+          <DatabasePanel />
+        </div>
+        <div className={activeTab === 'log' ? 'h-full' : 'hidden'}>
+          <GitLog repoPath={repoPath} />
+        </div>
+        <div className={activeTab === 'diff' ? 'h-full' : 'hidden'}>
           <GitDiff repoPath={repoPath} filePath={selectedFile} />
-        )}
-        {activeTab === 'chat' && <ChatPanel model={activeModel} />}
-        {activeTab === 'dashboard' && <DashboardPanel />}
+        </div>
+        <div className={activeTab === 'chat' ? 'h-full' : 'hidden'}>
+          <ChatPanel model={activeModel} />
+        </div>
+        <div className={activeTab === 'ci' ? 'h-full' : 'hidden'}>
+          <CIPanel repoPath={repoPath} />
+        </div>
+        <div className={activeTab === 'docs' ? 'h-full' : 'hidden'}>
+          <DocsPanel repoPath={repoPath} />
+        </div>
+        <div className={activeTab === 'plugins' ? 'h-full' : 'hidden'}>
+          <PluginPanel />
+        </div>
+        <div className={activeTab === 'dashboard' ? 'h-full' : 'hidden'}>
+          <DashboardPanel />
+        </div>
       </div>
     </div>
   );

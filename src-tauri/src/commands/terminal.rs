@@ -1,3 +1,4 @@
+// src-tauri/src/commands/terminal.rs
 use crate::state::AppState;
 use portable_pty::{CommandBuilder, NativePtySystem, PtySize, PtySystem};
 use std::io::{Read, Write};
@@ -5,7 +6,23 @@ use std::thread;
 use tauri::{Emitter, State, Window};
 
 #[tauri::command]
-pub fn spawn_shell(window: Window, state: State<AppState>) -> Result<(), String> {
+pub fn spawn_shell(window: Window, repo_path: String, state: State<AppState>) -> Result<(), String> {
+    // INLINE CLEANUP: Kill any existing shell to prevent zombies during React Strict Mode double-mounts
+    {
+        let mut child_lock = state.pty_child.lock().map_err(|e| e.to_string())?;
+        if let Some(mut child) = child_lock.take() {
+            let _ = child.kill();
+        }
+    }
+    {
+        let mut master_lock = state.pty_master.lock().map_err(|e| e.to_string())?;
+        *master_lock = None;
+    }
+    {
+        let mut writer_lock = state.pty_writer.lock().map_err(|e| e.to_string())?;
+        *writer_lock = None;
+    }
+
     let pty_system = NativePtySystem::default();
     let pty_pair = pty_system
         .openpty(PtySize {
@@ -22,16 +39,16 @@ pub fn spawn_shell(window: Window, state: State<AppState>) -> Result<(), String>
         std::env::var("SHELL").unwrap_or_else(|_| "bash".to_string())
     };
 
-    let cmd = CommandBuilder::new(shell);
+    let mut cmd = CommandBuilder::new(shell);
+    cmd.cwd(&repo_path); // Ensure it opens in the selected workspace
+    cmd.env("PROMPT_EOL_MARK", "");
+
     let child = pty_pair
         .slave
         .spawn_command(cmd)
         .map_err(|e| e.to_string())?;
 
-    // Clone the reader for the background thread
     let mut reader = pty_pair.master.try_clone_reader().map_err(|e| e.to_string())?;
-    
-    // Take the writer (can only be done once) for sending input to the shell
     let writer = pty_pair.master.take_writer().map_err(|e| e.to_string())?;
 
     let mut state_master = state.pty_master.lock().map_err(|e| e.to_string())?;
@@ -41,12 +58,11 @@ pub fn spawn_shell(window: Window, state: State<AppState>) -> Result<(), String>
     let mut state_writer = state.pty_writer.lock().map_err(|e| e.to_string())?;
     *state_writer = Some(writer);
     drop(state_writer);
-    
+
     let mut state_child = state.pty_child.lock().map_err(|e| e.to_string())?;
     *state_child = Some(child);
     drop(state_child);
-    
-    // Drop the slave side in the parent process to avoid resource leaks
+
     drop(pty_pair.slave);
 
     let window_out = window.clone();
@@ -54,7 +70,7 @@ pub fn spawn_shell(window: Window, state: State<AppState>) -> Result<(), String>
         let mut buf = [0u8; 4096];
         loop {
             match reader.read(&mut buf) {
-                Ok(0) => break, // EOF
+                Ok(0) => break, // EOF (happens when child is killed)
                 Ok(n) => {
                     let output = String::from_utf8_lossy(&buf[..n]).into_owned();
                     let _ = window_out.emit("terminal-output", output);
@@ -64,6 +80,22 @@ pub fn spawn_shell(window: Window, state: State<AppState>) -> Result<(), String>
         }
     });
 
+    Ok(())
+}
+
+#[tauri::command]
+pub fn kill_shell(state: State<AppState>) -> Result<(), String> {
+    let mut child_lock = state.pty_child.lock().map_err(|e| e.to_string())?;
+    if let Some(mut child) = child_lock.take() {
+        let _ = child.kill();
+    }
+    
+    let mut master_lock = state.pty_master.lock().map_err(|e| e.to_string())?;
+    *master_lock = None;
+    
+    let mut writer_lock = state.pty_writer.lock().map_err(|e| e.to_string())?;
+    *writer_lock = None;
+    
     Ok(())
 }
 

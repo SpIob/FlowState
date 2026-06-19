@@ -1,6 +1,6 @@
 // src/components/layout/ResizablePanels.tsx
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { MonacoEditor } from '../editor/MonacoEditor';
+import { EditorWorkspace } from '../editor/EditorWorkspace';
 import { TerminalPanel } from '../terminal/TerminalPanel';
 import { GitPanel } from '../git/GitPanel';
 
@@ -31,6 +31,7 @@ export function ResizablePanels({ repoPath, activeModel }: ResizablePanelsProps)
 
   const onMouseMove = useCallback((e: MouseEvent) => {
     if (!dragStateRef.current) return;
+
     const { dividerIndex, startX, startPanels } = dragStateRef.current;
     const containerWidth = containerRef.current?.offsetWidth || window.innerWidth;
     const delta = ((e.clientX - startX) / containerWidth) * 100;
@@ -108,7 +109,7 @@ export function ResizablePanels({ repoPath, activeModel }: ResizablePanelsProps)
     <div ref={containerRef} className="flex flex-1 overflow-hidden">
       {/* Editor Panel */}
       <div className="h-full overflow-hidden" style={{ width: `${panels.editor}%` }}>
-        <MonacoEditor filePath="src/main.rs" activeModel={activeModel} />
+        <EditorWorkspace repoPath={repoPath} activeModel={activeModel} />
       </div>
 
       {/* Divider 1 */}
@@ -119,7 +120,7 @@ export function ResizablePanels({ repoPath, activeModel }: ResizablePanelsProps)
 
       {/* Terminal Panel */}
       <div className="h-full overflow-hidden" style={{ width: `${panels.terminal}%` }}>
-        <TerminalPanel />
+        <TerminalPanel repoPath={repoPath} />
       </div>
 
       {/* Divider 2 */}

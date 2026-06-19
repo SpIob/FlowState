@@ -1,3 +1,4 @@
+// src/hooks/useGitStatus.ts
 import { useState, useEffect, useCallback } from 'react';
 import { getGitStatus } from '../lib/tauri';
 import { GitFileStatus } from '../types/git.types';
@@ -20,10 +21,9 @@ export function useGitStatus(repoPath: string): UseGitStatusResult {
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setError(null);
-    
+
     try {
       const result = await getGitStatus(repoPath);
       setStatus(result);
@@ -37,6 +37,25 @@ export function useGitStatus(repoPath: string): UseGitStatusResult {
 
   useEffect(() => {
     fetchStatus();
+  }, [fetchStatus]);
+
+  // Auto-refresh when the app window regains focus
+  useEffect(() => {
+    const handleFocus = () => fetchStatus();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [fetchStatus]);
+
+  // NEW: Auto-refresh when a file is saved in the editor
+  useEffect(() => {
+    const handleFileSaved = () => {
+      // 100ms delay ensures the OS file system has flushed the write 
+      // before libgit2 reads the working directory status.
+      setTimeout(fetchStatus, 100);
+    };
+    
+    window.addEventListener('flowstate-file-saved', handleFileSaved);
+    return () => window.removeEventListener('flowstate-file-saved', handleFileSaved);
   }, [fetchStatus]);
 
   return { status, loading, error, refetch: fetchStatus };
