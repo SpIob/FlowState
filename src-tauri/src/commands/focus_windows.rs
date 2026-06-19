@@ -9,11 +9,6 @@ use windows::Win32::UI::Shell::{SHChangeNotify, SHCNE_ASSOCCHANGED, SHCNF_IDLIST
 
 #[command]
 pub fn trigger_focus_mode() -> Result<(), String> {
-    // The FocusSessionManager COM API lacks complete binding coverage in the 
-    // `windows` crate v0.58 for starting sessions directly. Per the research 
-    // fallback strategy, we use the registry method which is reliable and 
-    // requires no admin rights.
-    
     let subkey = HSTRING::from("Software\\Microsoft\\Windows\\CurrentVersion\\FocusAssist");
     let mut hkey = HKEY::default();
     
@@ -30,7 +25,8 @@ pub fn trigger_focus_mode() -> Result<(), String> {
             None,
         );
         
-        if let Err(e) = create_result {
+        // WIN32_ERROR requires .ok() to convert to a standard Result
+        if let Err(e) = create_result.ok() {
             return Err(format!("Failed to open registry key: {}", e));
         }
 
@@ -47,7 +43,7 @@ pub fn trigger_focus_mode() -> Result<(), String> {
 
         let _ = RegCloseKey(hkey);
 
-        if let Err(e) = set_result {
+        if let Err(e) = set_result.ok() {
             return Err(format!("Failed to write registry value: {}", e));
         }
 
