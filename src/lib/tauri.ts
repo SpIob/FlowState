@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { GitFileStatus, GitCommit } from '../types/git.types';
 import type { OllamaModel, ChatMessage } from '../types/ai.types';
+import type { ScoringWeights, CognitiveScoreResult } from '../types/cognitive.types';
 
 /**
  * Fetches the Git status (staged, unstaged, untracked) for a given repository.
@@ -86,4 +87,31 @@ export async function completeCode(
 
 export async function checkOllama(): Promise<boolean> {
   return await invoke('check_ollama');
+}
+
+/**
+ * Records a generic signal event to the backend database.
+ */
+export async function recordSignal(eventType: string, payload: object): Promise<void> {
+  await invoke('record_signal', { eventType, payload: JSON.stringify(payload) });
+}
+
+export async function getScoringWeights(): Promise<ScoringWeights> {
+  return await invoke('get_scoring_weights');
+}
+
+export async function updateScoringWeights(weights: ScoringWeights): Promise<void> {
+  await invoke('update_scoring_weights', { weights });
+}
+
+export async function computeCognitiveScore(): Promise<CognitiveScoreResult> {
+  return await invoke('compute_cognitive_score');
+}
+
+export async function triggerFocusMode(): Promise<void> {
+  await invoke('trigger_focus_mode');
+}
+
+export async function checkShortcutExists(): Promise<boolean> {
+  return await invoke('check_shortcut_exists');
 }

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { useCompletion } from '../../hooks/useCompletion';
+import { useSignalCollector } from '../../hooks/useSignalCollector';
 
 interface MonacoEditorProps {
   filePath?: string;
@@ -22,8 +23,8 @@ const tabs: Tab[] = [
 
 export function MonacoEditor({ filePath, activeModel }: MonacoEditorProps) {
   const [activeTab, setActiveTab] = useState<string>('main');
-  console.log(activeModel);
   const { registerCompletionProvider } = useCompletion(activeModel);
+  const { recordKeystroke } = useSignalCollector();
 
   return (
     <div className="flex flex-col h-full bg-[var(--bg-panel)]">
@@ -78,6 +79,9 @@ export function MonacoEditor({ filePath, activeModel }: MonacoEditorProps) {
           onMount={(editor, monacoInstance) => {
             editor.focus();
             registerCompletionProvider(editor, monacoInstance);
+            editor.onKeyDown((e) => {
+              recordKeystroke(e.browserEvent.key, Date.now());
+            });
           }}
         />
       </div>

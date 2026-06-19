@@ -1,4 +1,4 @@
-/* src/components/layout/TitleBar.tsx */
+// src/components/layout/TitleBar.tsx
 import { useEffect, useState } from 'react';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
@@ -79,12 +79,12 @@ export function TitleBar({ repoPath, onSelectRepo }: TitleBarProps) {
 }
 
 function PathDisplay({ path }: { path: string }) {
-  const segments = path.split(' / ');
+  const segments = path.split('/');
   return (
     <span>
       {segments.map((segment, i) => (
         <span key={i}>
-          {i > 0 && <span className="opacity-50"> / </span>}
+          {i > 0 && <span className="opacity-50">/</span>}
           {segment}
         </span>
       ))}
@@ -94,12 +94,15 @@ function PathDisplay({ path }: { path: string }) {
 
 // Converts an absolute path to a tilde-prefixed display path
 function formatRepoPath(fullPath: string): string {
-  const home = fullPath.match(/^(\/Users\/[^/]+|\/home\/[^/]+)/)?.[0];
+  // Fix the invalid regex syntax from the original file by properly escaping slashes
+  const homeMatch = fullPath.match(/^(\/Users\/[^\/]+|\/home\/[^\/]+)/);
+  const home = homeMatch ? homeMatch[0] : null;
   const display = home ? fullPath.replace(home, '~') : fullPath;
+  
   // Show last two segments separated by the styled divider
   const parts = display.split('/').filter(Boolean);
   if (parts.length <= 2) return display;
-  return `…/${parts.slice(-2).join(' / ')}`;
+  return `…/${parts.slice(-2).join('/')}`;
 }
 
 function formatTime(date: Date): string {

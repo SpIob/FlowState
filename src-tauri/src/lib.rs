@@ -77,6 +77,18 @@ pub fn run() {
             commands::ollama::chat_stream,
             commands::ollama::complete_code,
             commands::ollama::check_ollama,
+            commands::signals::record_signal,
+            commands::cognitive_score::get_scoring_weights,
+            commands::cognitive_score::update_scoring_weights,
+            commands::cognitive_score::compute_cognitive_score,
+            #[cfg(target_os = "macos")]
+            commands::focus_macos::trigger_focus_mode,
+            #[cfg(target_os = "macos")]
+            commands::focus_macos::check_shortcut_exists,
+            #[cfg(target_os = "windows")]
+            commands::focus_windows::trigger_focus_mode,
+            #[cfg(target_os = "windows")]
+            commands::focus_windows::check_shortcut_exists,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

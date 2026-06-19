@@ -6,6 +6,11 @@ import { ResizablePanels } from './ResizablePanels';
 import { StatusBar } from './StatusBar';
 import { saveAppState, loadAppState } from '../../lib/tauri';
 import { useOllamaModels } from '../../hooks/useOllamaModels';
+import { useCognitiveScore } from '../../hooks/useCognitiveScore';
+import { useFocusMode } from '../../hooks/useFocusMode';
+import { useSignalCollector } from '../../hooks/useSignalCollector';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { FocusSetupCheck } from '../onboarding/FocusSetupCheck';
 
 const REPO_PATH_KEY = 'repoPath';
 
@@ -13,6 +18,9 @@ export function WorkspaceShell() {
   const [repoPath, setRepoPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { models, activeModel, setActiveModel, ollamaReady } = useOllamaModels();
+  const { score } = useCognitiveScore();
+  useFocusMode(score);
+  const { recordFocusChange } = useSignalCollector();
 
   // On mount, load the last used repo path from SQLite
   useEffect(() => {
@@ -23,6 +31,22 @@ export function WorkspaceShell() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  // Track window focus/blur for the focus_duration signal
+  useEffect(() => {
+    const appWindow = getCurrentWindow();
+    let unlistenFocus: (() => void) | undefined;
+
+    appWindow.onFocusChanged(({ payload: focused }) => {
+      recordFocusChange(focused);
+    }).then((unlisten) => {
+      unlistenFocus = unlisten;
+    });
+
+    return () => {
+      unlistenFocus?.();
+    };
+  }, [recordFocusChange]);
 
   const handleSelectRepo = async () => {
     const selected = await open({
@@ -63,15 +87,17 @@ export function WorkspaceShell() {
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-[var(--bg-base)]">
-      <TitleBar repoPath={repoPath} onSelectRepo={handleSelectRepo} />
-      <ResizablePanels repoPath={repoPath} activeModel={activeModel} />
-      <StatusBar
-        activeModel={activeModel}
-        models={models}
-        onModelSelect={setActiveModel}
-        ollamaReady={ollamaReady}
-      />
-    </div>
+    <FocusSetupCheck>
+      <div className="flex flex-col h-full w-full bg-[var(--bg-base)]">
+        <TitleBar repoPath={repoPath} onSelectRepo={handleSelectRepo} />
+        <ResizablePanels repoPath={repoPath} activeModel={activeModel} />
+        <StatusBar
+          activeModel={activeModel}
+          models={models}
+          onModelSelect={setActiveModel}
+          ollamaReady={ollamaReady}
+        />
+      </div>
+    </FocusSetupCheck>
   );
 }
