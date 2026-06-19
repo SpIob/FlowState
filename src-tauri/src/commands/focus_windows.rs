@@ -1,90 +1,65 @@
-// FILE 4: src-tauri/src/commands/focus_windows.rs
 #![cfg(target_os = "windows")]
 
-use windows::UI::Shell::{FocusSessionManager, IFocusSessionManager};
-use windows::Win32::System::Registry::{
-    RegCreateKeyExW, RegSetValueExW, RegCloseKey, HKEY_CURRENT_USER, KEY_WRITE, REG_DWORD,
-};
-use windows::Win32::UI::Shell::SHChangeNotify;
-use windows::Win32::Foundation::{HWND, BOOL};
+use tauri::command;
 use windows::core::HSTRING;
+use windows::Win32::System::Registry::{
+    RegCreateKeyExW, RegSetValueExW, RegCloseKey, HKEY, HKEY_CURRENT_USER, KEY_WRITE, REG_DWORD, REG_OPTION_NON_VOLATILE
+};
+use windows::Win32::UI::Shell::{SHChangeNotify, SHCNE_ASSOCCHANGED, SHCNF_IDLIST};
 
-#[tauri::command]
-pub async fn trigger_focus_mode() -> Result<(), String> {
-    // Try primary method: FocusSessionManager
-    let primary_result = try_focus_session_manager();
+#[command]
+pub fn trigger_focus_mode() -> Result<(), String> {
+    // The FocusSessionManager COM API lacks complete binding coverage in the 
+    // `windows` crate v0.58 for starting sessions directly. Per the research 
+    // fallback strategy, we use the registry method which is reliable and 
+    // requires no admin rights.
     
-    if primary_result.is_ok() {
-        return Ok(());
-    }
+    let subkey = HSTRING::from("Software\\Microsoft\\Windows\\CurrentVersion\\FocusAssist");
+    let mut hkey = HKEY::default();
     
-    // Fall back to registry method
-    try_registry_fallback()
-}
-
-fn try_focus_session_manager() -> Result<(), String> {
     unsafe {
-        let manager: Result<IFocusSessionManager, _> = 
-            FocusSessionManager::GetDefault();
-        
-        match manager {
-            Ok(mgr) => {
-                mgr.TryStartFocusSession()
-                    .map_err(|e| format!("TryStartFocusSession failed: {}", e))?;
-                Ok(())
-            }
-            Err(e) => Err(format!("FocusSessionManager unavailable: {}", e)),
-        }
-    }
-}
-
-fn try_registry_fallback() -> Result<(), String> {
-    unsafe {
-        let subkey = HSTRING::from("Software\\Microsoft\\Windows\\CurrentVersion\\FocusAssist");
-        let mut hkey = std::mem::zeroed();
-        
-        let result = RegCreateKeyExW(
+        let create_result = RegCreateKeyExW(
             HKEY_CURRENT_USER,
             &subkey,
             0,
             None,
-            0,
+            REG_OPTION_NON_VOLATILE,
             KEY_WRITE,
             None,
             &mut hkey,
             None,
         );
         
-        if result.is_err() {
-            return Err(format!("Failed to create registry key: {:?}", result));
+        if let Err(e) = create_result {
+            return Err(format!("Failed to open registry key: {}", e));
         }
+
+        // 2 = Alarms Only (Deep Work)
+        let value: u32 = 2; 
         
-        let value_name = HSTRING::from("FocusAssistState");
-        let value: u32 = 2; // Alarms Only
-        
-        let result = RegSetValueExW(
+        let set_result = RegSetValueExW(
             hkey,
-            &value_name,
+            None, // Sets the default value of the key
             0,
             REG_DWORD,
-            std::slice::from_raw_parts(&value as *const u32 as *const u8, 4),
+            Some(&value.to_le_bytes()),
         );
-        
-        RegCloseKey(hkey).ok();
-        
-        if result.is_err() {
-            return Err(format!("Failed to set registry value: {:?}", result));
+
+        let _ = RegCloseKey(hkey);
+
+        if let Err(e) = set_result {
+            return Err(format!("Failed to write registry value: {}", e));
         }
-        
-        // Force system pickup
-        SHChangeNotify(0x08000000, 0x1000, None, None);
-        
-        Ok(())
+
+        // Force system to pick up the change immediately
+        SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, None, None);
     }
+
+    Ok(())
 }
 
-#[tauri::command]
-pub async fn check_shortcut_exists() -> Result<bool, String> {
-    // Windows has no equivalent - always return true
+#[command]
+pub fn check_shortcut_exists() -> Result<bool, String> {
+    // Windows has no manual shortcut setup requirement
     Ok(true)
 }
