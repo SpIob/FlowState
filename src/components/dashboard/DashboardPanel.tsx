@@ -1,11 +1,11 @@
-// src/components/dashboard/DashboardPanel.tsx
 import { useCognitiveScore } from '../../hooks/useCognitiveScore';
 import { CognitiveLoadGauge } from './CognitiveLoadGauge';
 import { SignalBreakdown } from './SignalBreakdown';
 import { WeightSettings } from './WeightSettings';
 
 export function DashboardPanel() {
-  const { score, loading, weights, setWeights } = useCognitiveScore();
+  // Removed unused 'loading' variable to satisfy strict TS compiler
+  const { score, weights, setWeights } = useCognitiveScore();
 
   if (!score) {
     return (

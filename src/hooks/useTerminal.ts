@@ -1,4 +1,4 @@
-import { useEffect, useState, RefObject } from 'react';
+import { useEffect, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { listen } from '@tauri-apps/api/event';
@@ -6,7 +6,7 @@ import { spawnShell, writeToShell } from '../lib/tauri';
 import { useSignalCollector } from './useSignalCollector';
 import 'xterm/css/xterm.css'; // Note: If using xterm v5+, import from '@xterm/xterm/css/xterm.css'
 
-export function useTerminal(containerRef: RefObject<HTMLDivElement>) {
+export function useTerminal(containerRef: React.RefObject<HTMLDivElement | null>) {
   const [terminal, setTerminal] = useState<Terminal | null>(null);
   const { recordKeystroke } = useSignalCollector();
 
@@ -50,16 +50,11 @@ export function useTerminal(containerRef: RefObject<HTMLDivElement>) {
       // xterm sends raw bytes, not named keys. Backspace arrives as DEL
       // (0x7f) in most terminal modes, or BS (0x08) in some configurations.
       // Record it under the same 'Backspace' label Monaco's keydown events
-      // use, so the existing backspace_latency calculation in
-      // compute_cognitive_score picks it up identically from either source.
+      // use, so the existing backspace_latency calculation picks it up identically.
       if (data === '\x7f' || data === '\b') {
         recordKeystroke('Backspace', Date.now());
       } else if (data.length === 1) {
-        // Any other single printable character — needed so the latency
-        // calculation (which measures time since the PREVIOUS keystroke)
-        // has a prior timestamp to measure backspace against. Multi-byte
-        // sequences (arrow keys, escape codes) are skipped since they're
-        // not part of normal typing cadence.
+        // Any other single printable character
         recordKeystroke(data, Date.now());
       }
     });
@@ -80,7 +75,7 @@ export function useTerminal(containerRef: RefObject<HTMLDivElement>) {
       unlisten?.();
       term.dispose();
     };
-  }, [containerRef]);
+  }, [containerRef, recordKeystroke]);
 
   return { terminal };
 }
