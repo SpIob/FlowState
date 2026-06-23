@@ -1,7 +1,7 @@
 {
   "productName": "FlowState",
   "version": "0.1.0",
-  "identifier": "dev.flowstate.app",
+  "identifier": "dev.flowstate.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
