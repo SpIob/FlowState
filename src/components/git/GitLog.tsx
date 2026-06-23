@@ -26,21 +26,14 @@ export function GitLog({ repoPath }: GitLogProps) {
       ) : (
         <ul className="flex flex-col" role="list" aria-label="Git Commit History">
           {commits.map((commit) => (
-            <li 
-              key={commit.hash} 
-              className="py-3 px-2 rounded-md hover:bg-[var(--bg-elevated)] transition-colors cursor-default flex items-baseline justify-between gap-4" 
-              role="listitem" 
-              aria-label={`Commit by ${commit.author}: ${commit.message}`}
-            >
+            <li key={commit.hash} className="py-3 px-2 rounded-md hover:bg-[var(--bg-elevated)] transition-colors cursor-default flex items-baseline justify-between gap-4" role="listitem" aria-label={`Commit by ${commit.author}: ${commit.message}`}>
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-sm text-[var(--text-primary)] truncate">{commit.message}</span>
                 <span className="font-mono text-xs text-[var(--text-muted)]">{commit.hash.substring(0, 7)}</span>
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-xs text-[var(--text-muted)]">{commit.author}</span>
-                <span className="text-xs text-[var(--text-muted)]">
-                  {new Date(commit.timestamp * 1000).toLocaleDateString()}
-                </span>
+                <span className="text-xs text-[var(--text-muted)]">{new Date(commit.timestamp * 1000).toLocaleDateString()}</span>
               </div>
             </li>
           ))}

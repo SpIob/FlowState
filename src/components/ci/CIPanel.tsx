@@ -7,13 +7,11 @@ export function CIPanel({ repoPath }: Props) {
   const [owner, setOwner] = useState('');
   const [repo, setRepo] = useState('');
   const [pat, setPat] = useState(localStorage.getItem('github_pat') || '');
-
   const [runs, setRuns] = useState<WorkflowRun[]>([]);
   const [selectedRun, setSelectedRun] = useState<WorkflowRun | null>(null);
   const [jobs, setJobs] = useState<WorkflowJob[]>([]);
   const [selectedJob, setSelectedJob] = useState<WorkflowJob | null>(null);
   const [logs, setLogs] = useState<string>('');
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -33,33 +31,22 @@ export function CIPanel({ repoPath }: Props) {
       setRuns(result);
       setSelectedRun(null); setJobs([]); setSelectedJob(null); setLogs('');
       setLastUpdated(new Date().toLocaleTimeString());
-    } catch (err: any) {
-      setError(err?.message || "Failed to fetch runs");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err: any) { setError(err?.message || "Failed to fetch runs"); } 
+    finally { setLoading(false); }
   }, [owner, repo, pat]);
 
-  useEffect(() => {
-    if (owner && repo) fetchRuns();
-  }, [fetchRuns]);
+  useEffect(() => { if (owner && repo) fetchRuns(); }, [fetchRuns]);
 
   const handleSelectRun = async (run: WorkflowRun) => {
-    setSelectedRun(run);
-    setSelectedJob(null); setLogs('');
-    try {
-      const result = await getWorkflowJobs(owner, repo, run.id, pat || undefined);
-      setJobs(result);
-    } catch (err: any) { setError(err?.message || "Failed to fetch jobs"); }
+    setSelectedRun(run); setSelectedJob(null); setLogs('');
+    try { setJobs(await getWorkflowJobs(owner, repo, run.id, pat || undefined)); } 
+    catch (err: any) { setError(err?.message || "Failed to fetch jobs"); }
   };
 
   const handleSelectJob = async (job: WorkflowJob) => {
-    setSelectedJob(job);
-    setLogs('Loading logs...');
-    try {
-      const result = await getJobLogs(owner, repo, job.id, pat || undefined);
-      setLogs(result);
-    } catch (err: any) { setLogs(`Error: ${err?.message || "Failed to fetch logs"}`); }
+    setSelectedJob(job); setLogs('Loading logs...');
+    try { setLogs(await getJobLogs(owner, repo, job.id, pat || undefined)); } 
+    catch (err: any) { setLogs(`Error: ${err?.message || "Failed to fetch logs"}`); }
   };
 
   const savePat = (val: string) => {
@@ -110,7 +97,6 @@ export function CIPanel({ repoPath }: Props) {
               ))}
             </div>
           </div>
-
           <div className="flex-1 flex flex-col border border-[var(--border-subtle)] rounded-md bg-[var(--bg-base)] overflow-hidden">
             <div className="px-3 py-2 text-[10px] text-[var(--text-muted)] tracking-widest">Jobs</div>
             <div className="flex-1 overflow-y-auto" role="list" aria-label="Workflow Jobs">
@@ -123,11 +109,8 @@ export function CIPanel({ repoPath }: Props) {
             </div>
           </div>
         </div>
-
         <div className="flex-1 flex flex-col border border-[var(--border-subtle)] rounded-md bg-[var(--bg-base)] overflow-hidden">
-          <div className="px-3 py-2 text-[10px] text-[var(--text-muted)] tracking-widest shrink-0">
-            Logs {selectedJob && `— ${selectedJob.name}`}
-          </div>
+          <div className="px-3 py-2 text-[10px] text-[var(--text-muted)] tracking-widest shrink-0">Logs {selectedJob && `— ${selectedJob.name}`}</div>
           <pre className="flex-1 overflow-auto p-3 text-[11px] font-mono text-[var(--text-secondary)] whitespace-pre-wrap leading-relaxed">
             {logs || (selectedJob ? 'Select a job to view logs.' : 'Select a run to view jobs.')}
           </pre>
