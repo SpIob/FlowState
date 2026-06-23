@@ -44,6 +44,7 @@ jobs:
         run: brew install openssl libgit2
 
       - name: Debug Secret Injection
+        shell: bash
         run: |
           if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
             echo "❌ TAURI_SIGNING_PRIVATE_KEY is EMPTY or MISSING!"
