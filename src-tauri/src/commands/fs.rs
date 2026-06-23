@@ -67,3 +67,66 @@ pub fn write_file(file_path: String, content: String) -> Result<(), String> {
 pub fn check_path_exists(path: String) -> bool {
     std::path::Path::new(&path).exists()
 }
+
+#[tauri::command]
+pub fn create_file(file_path: String) -> Result<(), String> {
+    std::fs::File::create(&file_path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn create_dir(dir_path: String) -> Result<(), String> {
+    std::fs::create_dir_all(&dir_path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn rename_path(old_path: String, new_path: String) -> Result<(), String> {
+    std::fs::rename(&old_path, &new_path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_path(path: String) -> Result<(), String> {
+    let metadata = std::fs::metadata(&path).map_err(|e| e.to_string())?;
+    if metadata.is_dir() {
+        std::fs::remove_dir_all(&path).map_err(|e| e.to_string())?;
+    } else {
+        std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn list_workspace_files(dir_path: String) -> Result<Vec<String>, String> {
+    let mut files = Vec::new();
+    let path = std::path::Path::new(&dir_path);
+    
+    if !path.exists() {
+        return Err("Directory does not exist".to_string());
+    }
+
+    fn scan_dir(dir: &std::path::Path, files: &mut Vec<String>) -> Result<(), String> {
+        let read_dir = std::fs::read_dir(dir).map_err(|e| e.to_string())?;
+        for entry in read_dir {
+            let entry = entry.map_err(|e| e.to_string())?;
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            
+            // Skip hidden folders and heavy build/dependency directories
+            if file_name.starts_with('.') || file_name == "node_modules" || file_name == "target" || file_name == "dist" || file_name == "build" || file_name == "venv" || file_name == "__pycache__" {
+                continue;
+            }
+
+            let current_path = entry.path();
+            if current_path.is_dir() {
+                scan_dir(&current_path, files)?;
+            } else {
+                files.push(current_path.to_string_lossy().to_string());
+            }
+        }
+        Ok(())
+    }
+
+    scan_dir(path, &mut files)?;
+    Ok(files)
+}

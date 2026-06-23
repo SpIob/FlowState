@@ -34,6 +34,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()
                 .expect("failed to resolve app data dir");
@@ -110,6 +111,11 @@ pub fn run() {
             commands::fs::read_file,
             commands::fs::write_file,
             commands::fs::check_path_exists,
+            commands::fs::create_file,
+            commands::fs::create_dir,
+            commands::fs::rename_path,
+            commands::fs::delete_path,
+            commands::fs::list_workspace_files,
             commands::terminal::kill_shell,
             commands::db_viewer::list_tables,
             commands::db_viewer::get_schema,

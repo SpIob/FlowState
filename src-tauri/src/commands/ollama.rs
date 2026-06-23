@@ -1,33 +1,45 @@
 // src-tauri/src/commands/ollama.rs
-use futures_util::StreamExt;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use tauri::Emitter;
+use serde_json::json;
+use tauri::{AppHandle, Emitter};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OllamaModel {
     pub name: String,
     pub size: u64,
     pub modified_at: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
 }
 
+#[derive(Deserialize, Debug)]
+struct OllamaChatResponse {
+    message: Option<OllamaMessage>,
+    done: bool,
+}
+
+#[derive(Deserialize, Debug)]
+struct OllamaMessage {
+    content: String,
+}
+
 #[tauri::command]
 pub async fn list_models() -> Result<Vec<OllamaModel>, String> {
-    let client = reqwest::Client::new();
+    let client = Client::new();
     let res = client
         .get("http://localhost:11434/api/tags")
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
-    let json: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
-    
-    let models = json
+    let json_val: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+
+    let models = json_val
         .get("models")
         .and_then(|m| m.as_array())
         .ok_or("Invalid response format from Ollama")?;
@@ -50,12 +62,14 @@ pub async fn list_models() -> Result<Vec<OllamaModel>, String> {
 
 #[tauri::command]
 pub async fn chat_stream(
-    window: tauri::Window,
+    app: AppHandle,
     model: String,
     messages: Vec<ChatMessage>,
 ) -> Result<(), String> {
-    let client = reqwest::Client::new();
-    let body = serde_json::json!({
+    let client = Client::new();
+    
+    // Ollama requires this exact payload structure
+    let payload = json!({
         "model": model,
         "messages": messages,
         "stream": true
@@ -63,40 +77,41 @@ pub async fn chat_stream(
 
     let res = client
         .post("http://localhost:11434/api/chat")
-        .json(&body)
+        .json(&payload)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            let _ = app.emit("chat-done", ()); // Guarantee UI unlocks
+            format!("Failed to connect to Ollama. Is it running? ({})", e)
+        })?;
 
-    let mut stream = res.bytes_stream();
-    let mut buffer = String::new();
+    if !res.status().is_success() {
+        let err_text = res.text().await.unwrap_or_else(|_| "Unknown Ollama error".to_string());
+        let _ = app.emit("chat-done", ()); // Guarantee UI unlocks
+        return Err(format!("Ollama API error: {}", err_text));
+    }
 
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| e.to_string())?;
-        buffer.push_str(&String::from_utf8_lossy(&chunk));
+    // Read the full response text (safest approach without extra stream dependencies)
+    let text = res.text().await.map_err(|e| {
+        let _ = app.emit("chat-done", ());
+        e.to_string()
+    })?;
 
-        while let Some(newline_idx) = buffer.find('\n') {
-            let line = buffer[..newline_idx].trim().to_string();
-            buffer = buffer[newline_idx + 1..].to_string();
-
-            if !line.is_empty() {
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line) {
-                    if let Some(content) = json.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_str()) {
-                        window.emit("ai-stream-chunk", content).map_err(|e| e.to_string())?;
-                    }
-                    if let Some(done) = json.get("done").and_then(|d| d.as_bool()) {
-                        if done {
-                            window.emit("ai-stream-done", "").map_err(|e| e.to_string())?;
-                            return Ok(());
-                        }
-                    }
-                }
+    // Ollama returns NDJSON (newline-delimited JSON)
+    for line in text.lines() {
+        if line.trim().is_empty() { continue; }
+         
+        if let Ok(parsed) = serde_json::from_str::<OllamaChatResponse>(line) {
+            if let Some(msg) = parsed.message {
+                let _ = app.emit("chat-chunk", msg.content);
+            }
+            if parsed.done {
+                break;
             }
         }
     }
-    
-    // Fallback if stream ends unexpectedly without a "done" flag
-    window.emit("ai-stream-done", "").map_err(|e| e.to_string())?;
+
+    let _ = app.emit("chat-done", ()); // Guarantee UI unlocks
     Ok(())
 }
 
@@ -106,7 +121,7 @@ pub async fn complete_code(
     prefix: String,
     suffix: String,
 ) -> Result<String, String> {
-    let client = reqwest::Client::builder()
+    let client = Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()
         .map_err(|e| e.to_string())?;
@@ -116,7 +131,7 @@ pub async fn complete_code(
         prefix, suffix
     );
 
-    let body = serde_json::json!({
+    let body = json!({
         "model": model,
         "prompt": prompt,
         "raw": true,
@@ -135,9 +150,9 @@ pub async fn complete_code(
         .await
         .map_err(|e| e.to_string())?;
 
-    let json: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
-    
-    let raw = json
+    let json_val: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+
+    let raw = json_val
         .get("response")
         .and_then(|r| r.as_str())
         .unwrap_or("")
@@ -148,21 +163,20 @@ pub async fn complete_code(
     Ok(response)
 }
 
-/// Strips a leading/trailing markdown code fence (```lang ... ```) if present.
+/// Strips a leading/trailing markdown code fence (`lang ...`) if present.
 /// Some instruct-tuned models wrap FIM completions in a fenced block even
 /// when asked for raw infill text — this normalizes that back to plain code.
 fn strip_code_fence(text: &str) -> &str {
     let trimmed = text.trim();
-    if !trimmed.starts_with("```") {
+    if !trimmed.starts_with('`') {
         return text;
     }
-
     let after_open = match trimmed.find('\n') {
         Some(idx) => &trimmed[idx + 1..],
         None => return text,
     };
 
-    match after_open.rfind("```") {
+    match after_open.rfind('`') {
         Some(idx) => after_open[..idx].trim_end(),
         None => after_open,
     }
@@ -170,7 +184,7 @@ fn strip_code_fence(text: &str) -> &str {
 
 #[tauri::command]
 pub async fn check_ollama() -> Result<bool, String> {
-    let client = reqwest::Client::new();
+    let client = Client::new();
     match client.get("http://localhost:11434/").send().await {
         Ok(_) => Ok(true),
         Err(e) => {

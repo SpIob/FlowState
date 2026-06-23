@@ -1,31 +1,19 @@
-// src/components/terminal/TerminalPanel.tsx
 import { useRef } from 'react';
 import { useTerminal } from '../../hooks/useTerminal';
 
-interface TerminalPanelProps {
-  repoPath: string;
-}
+interface TerminalPanelProps { repoPath: string; }
 
 export function TerminalPanel({ repoPath }: TerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   useTerminal(containerRef, repoPath);
 
   return (
-    <div className="flex flex-col h-full bg-[var(--bg-panel)]">
-      {/* Panel header */}
-      <div className="h-[35px] flex items-center px-4 gap-3 bg-[var(--bg-titlebar)] border-b border-[var(--border)] shrink-0">
-        <span className="text-[11px] font-semibold tracking-[0.08em] uppercase text-[var(--text-secondary)]">
-          TERMINAL
-        </span>
-        <div className="ml-auto">
-          <span className="inline-flex items-center px-2 py-0.5 text-[11px] text-[var(--text-secondary)] bg-[#1e1e1e] border border-[var(--border)] rounded-sm">
-            zsh
-          </span>
-        </div>
+    <div className="flex flex-col h-full min-h-0 bg-[var(--bg-base)]">
+      <div className="h-[28px] shrink-0 flex items-center px-3 gap-3">
+        <span className="text-xs text-[var(--text-muted)]">Terminal</span>
+        <span className="ml-auto text-xs text-[var(--text-muted)]">zsh</span>
       </div>
-
-      {/* Terminal surface */}
-      <div className="flex-1 overflow-hidden p-2">
+      <div className="flex-1 min-h-0 overflow-hidden px-3 pb-2">
         <div ref={containerRef} className="w-full h-full" />
       </div>
     </div>

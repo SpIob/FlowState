@@ -296,3 +296,23 @@ export async function listInstalledPlugins(): Promise<PluginRecord[]> {
 export async function grantPermission(pluginId: string, permission: string): Promise<void> {
   await invoke('grant_permission', { pluginId, permission });
 }
+
+export async function createFile(filePath: string): Promise<void> {
+  await invoke('create_file', { filePath });
+}
+
+export async function createDir(dirPath: string): Promise<void> {
+  await invoke('create_dir', { dirPath });
+}
+
+export async function renamePath(oldPath: string, newPath: string): Promise<void> {
+  await invoke('rename_path', { oldPath, newPath });
+}
+
+export async function deletePath(path: string): Promise<void> {
+  await invoke('delete_path', { path });
+}
+
+export async function listWorkspaceFiles(dirPath: string): Promise<string[]> {
+  return await invoke<string[]>('list_workspace_files', { dirPath });
+}

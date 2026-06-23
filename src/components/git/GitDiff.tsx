@@ -1,5 +1,5 @@
-/* src/components/git/GitDiff.tsx */
-import { useGitDiff } from '../../hooks/useGitDiff';
+import { useState, useEffect } from 'react';
+import { getGitDiff } from '../../lib/tauri';
 
 interface GitDiffProps {
   repoPath: string;
@@ -7,73 +7,48 @@ interface GitDiffProps {
 }
 
 export function GitDiff({ repoPath, filePath }: GitDiffProps) {
-  const { diff, loading, error } = useGitDiff(repoPath, filePath);
+  const [diff, setDiff] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
-  if (!filePath) {
-    return (
-      <div className="flex items-center justify-center h-full text-[12px] text-[var(--text-secondary)]">
-        Select a file to view diff
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full text-[12px] text-[var(--text-secondary)]">
-        Loading diff…
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full text-[12px] text-[var(--orange)]">
-        Error: {error}
-      </div>
-    );
-  }
-
-  if (!diff) {
-    return (
-      <div className="flex items-center justify-center h-full text-[12px] text-[var(--text-secondary)]">
-        No diff available
-      </div>
-    );
-  }
-
-  const lines = diff.split('\n');
+  useEffect(() => {
+    if (repoPath) {
+      setLoading(true);
+      getGitDiff(repoPath, filePath)
+        .then(setDiff)
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
+  }, [repoPath, filePath]);
 
   return (
-    <div className="overflow-auto scrollbar-thin h-full">
-      <pre className="py-2 text-[12px] leading-[1.6] font-['JetBrains_Mono','Fira_Code',monospace] bg-[var(--bg-panel)]">
-        {lines.map((line, index) => (
-          <DiffLine key={index} line={line} />
-        ))}
-      </pre>
-    </div>
-  );
-}
-
-function DiffLine({ line }: { line: string }) {
-  let bgColor = 'transparent';
-  let textColor = 'var(--text-primary)';
-
-  if (line.startsWith('+')) {
-    bgColor = '#1a3a1a';
-    textColor = '#4ec9b0';
-  } else if (line.startsWith('-')) {
-    bgColor = '#3a1a1a';
-    textColor = '#e06c75';
-  } else if (line.startsWith('@@')) {
-    textColor = '#569cd6';
-  }
-
-  return (
-    <div
-      className="px-4 whitespace-pre font-mono"
-      style={{ backgroundColor: bgColor, color: textColor }}
-    >
-      {line || '\u00A0'}
+    <div className="h-full flex flex-col bg-[var(--bg-base)]">
+      {filePath && (
+        <div className="px-4 py-2 text-xs text-[var(--text-muted)] border-b border-[var(--border-subtle)] shrink-0">
+          {filePath}
+        </div>
+      )}
+      <div className="flex-1 overflow-auto p-4">
+        {loading ? (
+          <div className="text-sm text-[var(--text-muted)]">Loading diff...</div>
+        ) : diff ? (
+          <pre className="font-mono text-[11px] leading-relaxed text-[var(--text-secondary)] whitespace-pre-wrap">
+            {diff.split('\n').map((line, i) => (
+              <div key={i} className={
+                line.startsWith('+') ? 'text-[var(--success)]' :
+                line.startsWith('-') ? 'text-[var(--danger)]' :
+                line.startsWith('@@') ? 'text-[var(--accent)]' :
+                ''
+              }>
+                {line}
+              </div>
+            ))}
+          </pre>
+        ) : (
+          <div className="text-sm text-[var(--text-muted)] text-center mt-8">
+            {filePath ? 'No changes in this file.' : 'Select a file to view diff.'}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -22,7 +22,7 @@ export function useTerminal(containerRef: React.RefObject<HTMLDivElement | null>
 
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: 14,
+      fontSize: 11,
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
       theme: {
         background: '#1e1e1e',

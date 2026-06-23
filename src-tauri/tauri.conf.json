@@ -16,8 +16,7 @@
         "height": 900,
         "resizable": true,
         "fullscreen": false,
-        "decorations": false,
-        "titleBarStyle": "Transparent"
+        "decorations": true
       }
     ],
     "security": {
@@ -26,7 +25,8 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi", "app", "dmg"],
+    "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -34,5 +34,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc5NzNEMzU4MzdFQ0Q0RDUKUldUVjFPdzNXTk56ZWNoTXFaWjkyUnFkM29STmN6ek5rY1J1Z0VaM1hhOGl6ejE0dnZJOEs4V3MK",
+      "endpoints": [
+        "https://github.com/SpIob/flowstate/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
