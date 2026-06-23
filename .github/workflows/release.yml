@@ -44,12 +44,27 @@ jobs:
         if: matrix.platform == 'macos-latest' || matrix.platform == 'macos-13'
         run: brew install openssl libgit2
 
+      - name: Debug Secret Injection
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "❌ TAURI_SIGNING_PRIVATE_KEY is EMPTY or MISSING!"
+            echo "Please go to Settings -> Secrets and variables -> Actions."
+            echo "Ensure there is a 'Repository secret' (NOT Environment secret) named EXACTLY: TAURI_SIGNING_PRIVATE_KEY"
+            exit 1
+          else
+            echo "✅ Secret injected successfully. Length: ${#TAURI_SIGNING_PRIVATE_KEY} characters."
+          fi
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}  
+
       - name: Build and Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
           releaseName: 'FlowState v__VERSION__'
