@@ -7,13 +7,19 @@ on:
 
 jobs:
   release:
+    # FIX 2: Grant the GITHUB_TOKEN permission to create releases
+    permissions:
+      contents: write
+    
     strategy:
       fail-fast: false
       matrix:
         include:
+          # FIX 1: Use macos-latest (ARM64) for Apple Silicon
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest'
+          # FIX 1: Use macos-13 (Intel) for x86_64 to avoid cross-compilation
+          - platform: 'macos-13'
             args: '--target x86_64-apple-darwin'
           - platform: 'windows-latest'
             args: ''
@@ -29,14 +35,13 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-
+        
       - name: Install Frontend Dependencies
         run: npm install
 
       - name: Install macOS Dependencies
-        if: matrix.platform == 'macos-latest'
+        # Ensure both mac runners get OpenSSL and libgit2
+        if: matrix.platform == 'macos-latest' || matrix.platform == 'macos-13'
         run: brew install openssl libgit2
 
       - name: Build and Release
@@ -45,12 +50,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Add Apple Notarization secrets here when ready:
-          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          # APPLE_ID: ${{ secrets.APPLE_ID }}
-          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           tagName: v__VERSION__
           releaseName: 'FlowState v__VERSION__'
