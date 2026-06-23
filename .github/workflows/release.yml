@@ -15,12 +15,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # FIX 1: Use macos-latest (ARM64) for Apple Silicon
+          # Apple Silicon (ARM64) - Fast queue, native compilation
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
-          # FIX 1: Use macos-13 (Intel) for x86_64 to avoid cross-compilation
-          - platform: 'macos-13'
-            args: '--target x86_64-apple-darwin'
+          
+          # Windows (x64)
           - platform: 'windows-latest'
             args: ''
 
