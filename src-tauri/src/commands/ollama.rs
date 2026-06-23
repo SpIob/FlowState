@@ -68,7 +68,6 @@ pub async fn chat_stream(
 ) -> Result<(), String> {
     let client = Client::new();
     
-    // Ollama requires this exact payload structure
     let payload = json!({
         "model": model,
         "messages": messages,
@@ -81,23 +80,21 @@ pub async fn chat_stream(
         .send()
         .await
         .map_err(|e| {
-            let _ = app.emit("chat-done", ()); // Guarantee UI unlocks
+            let _ = app.emit("chat-done", ());
             format!("Failed to connect to Ollama. Is it running? ({})", e)
         })?;
 
     if !res.status().is_success() {
         let err_text = res.text().await.unwrap_or_else(|_| "Unknown Ollama error".to_string());
-        let _ = app.emit("chat-done", ()); // Guarantee UI unlocks
+        let _ = app.emit("chat-done", ());
         return Err(format!("Ollama API error: {}", err_text));
     }
 
-    // Read the full response text (safest approach without extra stream dependencies)
     let text = res.text().await.map_err(|e| {
         let _ = app.emit("chat-done", ());
         e.to_string()
     })?;
 
-    // Ollama returns NDJSON (newline-delimited JSON)
     for line in text.lines() {
         if line.trim().is_empty() { continue; }
          
@@ -111,7 +108,7 @@ pub async fn chat_stream(
         }
     }
 
-    let _ = app.emit("chat-done", ()); // Guarantee UI unlocks
+    let _ = app.emit("chat-done", ());
     Ok(())
 }
 
@@ -164,8 +161,6 @@ pub async fn complete_code(
 }
 
 /// Strips a leading/trailing markdown code fence (`lang ...`) if present.
-/// Some instruct-tuned models wrap FIM completions in a fenced block even
-/// when asked for raw infill text — this normalizes that back to plain code.
 fn strip_code_fence(text: &str) -> &str {
     let trimmed = text.trim();
     if !trimmed.starts_with('`') {

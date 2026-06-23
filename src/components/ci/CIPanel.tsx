@@ -96,17 +96,11 @@ export function CIPanel({ repoPath }: Props) {
 
       <div className="flex-1 flex gap-3 overflow-hidden">
         <div className="w-[40%] min-w-[120px] flex flex-col gap-3 overflow-hidden">
-          {/* Runs List */}
           <div className="flex-1 flex flex-col border border-[var(--border-subtle)] rounded-md bg-[var(--bg-base)] overflow-hidden">
             <div className="px-3 py-2 text-[10px] text-[var(--text-muted)] tracking-widest">Runs</div>
             <div className="flex-1 overflow-y-auto" role="list" aria-label="Workflow Runs">
               {runs.map(run => (
-                <div 
-                  key={run.id} 
-                  onClick={() => handleSelectRun(run)} 
-                  className={`px-3 py-2 cursor-pointer hover:bg-[var(--bg-elevated)] transition-colors ${selectedRun?.id === run.id ? 'bg-[var(--bg-elevated)]' : ''}`} 
-                  role="listitem"
-                >
+                <div key={run.id} onClick={() => handleSelectRun(run)} className={`px-3 py-2 cursor-pointer hover:bg-[var(--bg-elevated)] transition-colors ${selectedRun?.id === run.id ? 'bg-[var(--bg-elevated)]' : ''}`} role="listitem">
                   <div className="truncate text-xs text-[var(--text-primary)]">{run.name || `Run #${run.id}`}</div>
                   <div className="flex justify-between items-center mt-0.5">
                     <span className={`text-[10px] font-medium ${getStatusColor(run.status, run.conclusion)}`}>{run.conclusion || run.status}</span>
@@ -117,17 +111,11 @@ export function CIPanel({ repoPath }: Props) {
             </div>
           </div>
 
-          {/* Jobs List */}
           <div className="flex-1 flex flex-col border border-[var(--border-subtle)] rounded-md bg-[var(--bg-base)] overflow-hidden">
             <div className="px-3 py-2 text-[10px] text-[var(--text-muted)] tracking-widest">Jobs</div>
             <div className="flex-1 overflow-y-auto" role="list" aria-label="Workflow Jobs">
               {jobs.map(job => (
-                <div 
-                  key={job.id} 
-                  onClick={() => handleSelectJob(job)} 
-                  className={`px-3 py-2 cursor-pointer hover:bg-[var(--bg-elevated)] transition-colors ${selectedJob?.id === job.id ? 'bg-[var(--bg-elevated)]' : ''}`} 
-                  role="listitem"
-                >
+                <div key={job.id} onClick={() => handleSelectJob(job)} className={`px-3 py-2 cursor-pointer hover:bg-[var(--bg-elevated)] transition-colors ${selectedJob?.id === job.id ? 'bg-[var(--bg-elevated)]' : ''}`} role="listitem">
                   <div className="truncate text-xs text-[var(--text-primary)]">{job.name}</div>
                   <span className={`text-[10px] font-medium ${getStatusColor(job.status, job.conclusion)}`}>{job.conclusion || job.status}</span>
                 </div>
@@ -136,7 +124,6 @@ export function CIPanel({ repoPath }: Props) {
           </div>
         </div>
 
-        {/* Logs Viewer */}
         <div className="flex-1 flex flex-col border border-[var(--border-subtle)] rounded-md bg-[var(--bg-base)] overflow-hidden">
           <div className="px-3 py-2 text-[10px] text-[var(--text-muted)] tracking-widest shrink-0">
             Logs {selectedJob && `— ${selectedJob.name}`}
